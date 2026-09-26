@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OBS Custom Timer - Pojok Kiri</title>
+<style>
+  /* 1. PASTE KODE IMPORT GOOGLE FONT DI SINI (CONTOH: BEBAS NEUE) */
+  @import url('https://fonts.googleapis.com/css2?family=Balsamiq+Sans&display=swap');
+
+  /* =========================================
+     PENGATURAN TAMPILAN (FONT & WARNA)
+     ========================================= */
+  :root {
+    /* 2. UBAH NAMA FONTNYA SESUAI YANG KAMU PILIH */
+    --timer-font: 'Balsamiq Sans', cursive; 
+    
+    --timer-color: #ffffff; 
+    --timer-bg: rgba(0, 0, 0, 0.6); 
+    --timer-size: 80px; 
+    /* ... (kode sisanya biarkan sama) ... */
+    --timer-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8); 
+    
+    /* --- POSISI (POJOK KIRI) --- */
+    --jarak-atas: 40px; /* Atur seberapa jauh dari ujung ATAS layar */
+    --jarak-kiri: 40px; /* Atur seberapa jauh dari ujung KIRI layar */
+
+    /* --- ANIMASI --- */
+    --slide-speed: 0.4s; 
+    --slide-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* --- JANGAN UBAH BAGIAN INI KECUALI PAHAM CSS --- */
+  body {
+    margin: 0;
+    overflow: hidden;
+    height: 100vh;
+    background: transparent;
+    position: relative; /* Menjadi patokan letak koordinat layarnya */
+  }
+
+  /* Base kotak background */
+  .overlay-box {
+    font-family: var(--timer-font);
+    color: var(--timer-color);
+    background: var(--timer-bg);
+    font-size: var(--timer-size);
+    font-weight: bold;
+    text-shadow: var(--timer-shadow);
+    padding: 15px 35px;
+    border-radius: 15px;
+    
+    /* PENEMPATAN KOORDINAT */
+    position: absolute; 
+    top: var(--jarak-atas);
+    left: var(--jarak-kiri);
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* -------------------------------------
+     POSISI AWAL
+     ------------------------------------- */
+  #timer-container {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  #message-container {
+    opacity: 0; 
+    transform: translateY(30px) scale(0.9);
+    pointer-events: none;
+  }
+
+  /* -------------------------------------
+     ANIMASI SAAT WAKTU HABIS
+     ------------------------------------- */
+  #timer-container.hide {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9); 
+  }
+
+  #message-container.show {
+    opacity: 1;
+    transform: translateY(0) scale(1); 
+  }
+
+  /* --- CSS Angka Timer --- */
+  .separator {
+    margin: 0 5px;
+    padding-bottom: 5px; 
+  }
+
+  .char-box {
+    display: inline-flex;
+    flex-direction: column;
+    height: 1em; 
+    overflow: hidden; 
+    position: relative;
+    vertical-align: top;
+  }
+
+  .char-inner {
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--slide-speed) var(--slide-easing);
+  }
+
+  .char-inner.slide-up {
+    transform: translateY(-1em); 
+  }
+
+  .char {
+    height: 1em;
+    line-height: 1em;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- KOTAK 1: TIMER COUNTDOWN -->
+<div id="timer-container" class="overlay-box">
+  <span class="char-box" id="m1"></span>
+  <span class="char-box" id="m2"></span>
+  <span class="separator">:</span>
+  <span class="char-box" id="s1"></span>
+  <span class="char-box" id="s2"></span>
+</div>
+
+<!-- KOTAK 2: TEKS SETELAH TIMER HABIS -->
+<div id="message-container" class="overlay-box">
+  Starting Soon :3
+</div>
+
+<script>
+  /* =========================================
+     PENGATURAN WAKTU
+     ========================================= */
+  const durationInMinutes = 50; // Ubah durasi timer di sini (misal 0.1 untuk test)
+  
+  const timeInMilliseconds = durationInMinutes * 60 * 1000;
+  const endTime = Date.now() + timeInMilliseconds;
+  let hasEnded = false;
+
+  function updateDigit(id, newValue) {
+    const container = document.getElementById(id);
+    const currentValue = container.getAttribute('data-value');
+
+    if (currentValue !== String(newValue)) {
+      container.setAttribute('data-value', newValue);
+      const newInner = document.createElement('span');
+      newInner.className = 'char-inner';
+      
+      const htmlLama = currentValue === null ? newValue : currentValue;
+      newInner.innerHTML = `<span class="char">${htmlLama}</span><span class="char">${newValue}</span>`;
+      
+      container.innerHTML = '';
+      container.appendChild(newInner);
+      
+      void container.offsetWidth;
+      
+      if (currentValue !== null) {
+        newInner.classList.add('slide-up');
+      }
+    }
+  }
+
+  function tick() {
+    if (hasEnded) return; 
+
+    const timeLeft = endTime - Date.now();
+
+    if (timeLeft <= 0) {
+      hasEnded = true; 
+      
+      updateDigit('m1', '0'); updateDigit('m2', '0');
+      updateDigit('s1', '0'); updateDigit('s2', '0');
+
+      setTimeout(() => {
+        document.getElementById('timer-container').classList.add('hide');
+        document.getElementById('message-container').classList.add('show');
+      }, 1000); 
+
+      return;
+    }
+
+    const totalSeconds = Math.floor(timeLeft / 1000);
+    const m = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+    const s = String(totalSeconds % 60).padStart(2, '0');
+
+    updateDigit('m1', m[0]);
+    updateDigit('m2', m[1]);
+    updateDigit('s1', s[0]);
+    updateDigit('s2', s[1]);
+
+    requestAnimationFrame(tick);
+  }
+
+  tick();
+</script>
+
+</body>
+</html>
